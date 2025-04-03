@@ -1,0 +1,21 @@
+// src/css/app.scss
+
+// Стили приложения
+// Вы можете импортировать другие файлы стилей здесь
+// Например: @import 'themes/app.variables.scss';
+
+// Ваши глобальные стили
+body {
+    // font-family: 'Roboto', sans-serif; // Пример установки шрифта
+}
+
+// Пример использования BEM
+.my-block {
+    &__element {
+        color: blue;
+
+        &--modifier {
+            font-weight: bold;
+        }
+    }
+}

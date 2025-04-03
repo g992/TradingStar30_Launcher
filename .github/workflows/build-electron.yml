@@ -1,0 +1,116 @@
+name: Build Electron App
+
+on:
+  push:
+    branches: [ master ] # Запускать при пуше в master
+  pull_request:
+    branches: [ master ] # Запускать при PR в master
+  workflow_dispatch: # Позволяет запускать вручную
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }} # Запускать на разных ОС
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest] # Матрица для сборки под Linux и Windows
+        node-version: [20.x] # Используем Node.js LTS
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4 # Загружаем код репозитория
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm' # Кэшируем зависимости npm
+
+      - name: Install dependencies
+        run: npm ci # Используем npm ci для быстрой и надежной установки
+
+      # Шаг для автоматического увеличения минорной версии (только для master)
+      - name: Bump version and push tag
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        id: tag_version
+        # Используем действия для автоматического тегирования и версионирования
+        # Это действие увеличит минорную версию в package.json и создаст тег
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }} # Токен для push тегов
+          release_branches: master # Указываем ветку для релизов/тегов
+          tag_prefix: "" # Убираем префикс v, если не нужен
+          # Закомментировано: можно указать 'minor' явно, но по умолчанию он и так minor
+          # default_bump: minor
+
+      - name: Build Electron app
+        run: npm run make # Запускаем команду сборки Electron Forge
+        # env:
+          # Токен GitHub для публикации артефактов (если нужно настроить публикацию)
+          # GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Можно добавить другие переменные окружения, если они нужны для сборки
+
+      # Шаг для загрузки артефактов сборки
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-app-${{ matrix.os }} # Имя артефакта (например, electron-app-ubuntu-latest)
+          # Путь к собранным файлам (обычно в папке out)
+          # Проверьте ваш forge.config.ts или вывод `npm run make`, чтобы убедиться в правильности пути
+          path: |
+            out/make/**/*.deb
+            out/make/**/*.rpm
+            out/make/**/*.zip
+            out/make/**/*.exe
+            out/make/**/*.msi
+            out/make/**/*.AppImage
+            !out/make/**/RELEASES* # Исключаем файлы RELEASES, если они не нужны
+          # retention-days: 5 # Опционально: сколько дней хранить артефакты
+
+      # Опционально: Шаг для создания релиза GitHub (только для master)
+      - name: Create GitHub Release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.tag_version.outputs.new_tag }} # Используем тег, созданный на шаге bump version
+          release_name: Release ${{ steps.tag_version.outputs.new_tag }}
+          body: | # Описание релиза (можно генерировать автоматически)
+            Автоматический релиз версии ${{ steps.tag_version.outputs.new_tag }}
+          draft: false
+          prerelease: false
+
+      # Опционально: Шаг для загрузки артефактов в релиз GitHub (только для master)
+      - name: Upload Release Assets
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          # Перебираем и загружаем все нужные артефакты из папки out/make
+          # Используем find для поиска файлов нужных типов
+          asset_path: |
+            ${{ github.workspace }}/out/make # Пример поиска .deb файла
+          asset_name: |
+             # Имя файла в релизе (можно настроить)
+             electron-app-${{ matrix.os }}-${{ steps.tag_version.outputs.new_tag }} # Пример
+          asset_content_type: application/octet-stream # Общий тип для бинарных файлов
+
+          # Нужно будет настроить asset_path и asset_name для каждого типа файла (.exe, .deb, .AppImage и т.д.)
+          # или использовать скрипт для автоматизации загрузки всех найденных артефактов.
+          # Пример для Windows (.exe):
+          # asset_path: ${{ github.workspace }}/out/make/squirrel.windows/x64/*.exe
+          # asset_name: my-app-${{ steps.tag_version.outputs.new_tag }}.exe
+          # asset_content_type: application/vnd.microsoft.portable-executable
+
+          # Пример для Linux (.AppImage):
+          # asset_path: ${{ github.workspace }}/out/make/*.AppImage
+          # asset_name: my-app-${{ steps.tag_version.outputs.new_tag }}.AppImage
+          # asset_content_type: application/vnd.appimage
+
+          # Из-за ограничений actions/upload-release-asset (загружает только один файл за шаг)
+          # может потребоваться несколько таких шагов или использование другого action/скрипта.
+          # Например, action "softprops/action-gh-release" позволяет загружать несколько файлов по маске. 
