@@ -1,54 +1,38 @@
-/**
- * This file is used specifically for security reasons.
- * Here you can access Nodejs stuff and inject functionality into
- * the renderer thread (accessible there through the "window" object)
- *
- * WARNING!
- * If you import anything from node_modules, then make sure that the package is specified
- * in package.json > dependencies and NOT in devDependencies
- *
- * Example (injects window.myAPI.doAThing() into renderer thread):
- *
- *   import { contextBridge } from 'electron'
- *
- *   contextBridge.exposeInMainWorld('myAPI', {
- *     doAThing: () => {}
- *   })
- *
- * WARNING!
- * If accessing Node functionality (like importing @electron/remote) then in your
- * electron-main.ts you will need to set the following when you instantiate BrowserWindow:
- *
- * mainWindow = new BrowserWindow({
- *   // ...
- *   webPreferences: {
- *     // ...
- *     sandbox: false // <-- to be able to import @electron/remote in preload script
- *   }
- * }
- */
-
 import { contextBridge, ipcRenderer } from 'electron';
 
-console.log('[Preload] Loading preload script...');
+// Определяем типы для большей безопасности
+interface ElectronAPI {
+    selectDirectory: () => Promise<string | undefined>;
+    startAppProcess: (appPath: string, apiKey: string) => Promise<{ success: boolean; message?: string }>;
+    stopAppProcess: () => Promise<void>;
+    onAppOutput: (callback: (message: string) => void) => void; // Для получения stdout
+    removeAppOutputListener: () => void; // Для очистки слушателя stdout
+}
 
-// Определяем API, которое будет доступно в window.electronAPI
-const electronAPI = {
-    /**
-     * Вызывает основной процесс для открытия системного диалога выбора директории.
-     * @returns {Promise<string | undefined>} Путь к выбранной директории или undefined, если выбор отменен.
-     */
-    selectDirectory: (): Promise<string | undefined> => {
-        console.log('[Preload] Invoking dialog:openFile');
-        return ipcRenderer.invoke('dialog:openFile');
+const api: ElectronAPI = {
+    // Вызываем диалог выбора директории в основном процессе
+    selectDirectory: () => ipcRenderer.invoke('select-directory'),
+
+    // Запрос на запуск процесса в основном потоке
+    startAppProcess: (appPath: string, apiKey: string) => ipcRenderer.invoke('start-app', appPath, apiKey),
+
+    // Запрос на остановку процесса в основном потоке
+    stopAppProcess: () => ipcRenderer.invoke('stop-app'),
+
+    // Подписка на вывод приложения (stdout) - Упрощенная версия
+    onAppOutput: (callback: (message: string) => void) => {
+        ipcRenderer.on('app-output', (_event, message) => callback(String(message)));
+        },
+
+    // Отписка от вывода приложения - Упрощенная версия
+    removeAppOutputListener: () => {
+        ipcRenderer.removeAllListeners('app-output');
     },
-    // Сюда можно добавить другие методы API
 };
 
-// Безопасно предоставляем API рендереру
 try {
-    contextBridge.exposeInMainWorld('electronAPI', electronAPI);
-    console.log('[Preload] electronAPI exposed successfully.');
+    contextBridge.exposeInMainWorld('electronAPI', api);
 } catch (error) {
     console.error('[Preload] Failed to expose electronAPI via contextBridge:', error);
 }
+

@@ -6,7 +6,7 @@
   "author": "G992",
   "main": ".webpack/main",
   "scripts": {
-    "start": "electron-forge start",
+    "start": "PORT=9090 electron-forge start",
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
@@ -48,7 +48,9 @@
     "@quasar/app-vite": "^2.2.0",
     "@quasar/extras": "^1.16.17",
     "@vueuse/core": "^13.0.0",
+    "ansi-to-html": "^0.7.2",
     "electron-squirrel-startup": "^1.0.1",
+    "pinia": "^3.0.1",
     "quasar": "^2.18.1"
   }
 }

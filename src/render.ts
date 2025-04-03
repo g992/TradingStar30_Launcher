@@ -11,10 +11,22 @@ import 'quasar/dist/quasar.sass'; // Основные стили Quasar (SCSS)
 import 'src/css/app.scss'; // Ваши основные стили
 
 import App from 'src/App.vue';
-import createRouter from 'src/router'; // Импортируем функцию создания роутера
+import createRouter from './router'; // Изменили путь
+
+// Импортируем наш boot-файл Pinia
+import piniaBoot from './boot/pinia';
+
+console.log('[Render] Начало render.ts');
 
 const app = createApp(App);
 const router = createRouter(); // Создаем экземпляр роутера
+
+console.log('[Render] Приложение создано');
+
+// Вручную вызываем логику boot-файла Pinia
+piniaBoot({ app }); // Передаем экземпляр app
+
+console.log('[Render] Pinia boot выполнен');
 
 app.use(Quasar, {
     plugins: { // Указываем плагины Quasar для установки
@@ -32,6 +44,12 @@ app.use(Quasar, {
     // Можно также указать iconSet: 'material-icons' или другой набор иконок, если нужно
 });
 
+console.log('[Render] Quasar подключен');
+
 app.use(router); // Подключаем роутер к приложению
 
-app.mount('#q-app'); // Монтируем приложение в элемент с id="q-app" в HTML 
+console.log('[Render] Роутер подключен, до app.mount');
+
+app.mount('#q-app'); // Монтируем приложение в элемент с id="q-app"
+
+console.log('[Render] Приложение смонтировано');

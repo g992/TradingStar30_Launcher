@@ -2,24 +2,9 @@ const { configure } = require('@quasar/app-vite');
 
 module.exports = configure(function (/* ctx */) {
     return {
-        // https://v2.quasar.dev/quasar-cli-vite/quasar-config-js
 
-        // Необходимые флаги для интеграции с внешними инструментами сборки
-        // Указываем Quasar, что мы не используем его собственный CLI для сборки
-        // build: {
-        //   // Вместо использования Quasar CLI для сборки, мы будем использовать Electron Forge
-        //   // Поэтому здесь не нужно указывать параметры сборки Quasar
-        // },
-
-        // // Не нужно, так как Electron Forge управляет режимом разработки
-        // devServer: {},
-
-        // https://v2.quasar.dev/quasar-cli-vite/prefetch-feature
-        // preFetch: true,
-
-        // app boot file (/src/boot)
-        // --> смотри https://v2.quasar.dev/quasar-cli-vite/boot-files
         boot: [
+            'pinia', // Добавляем наш boot-файл
             // 'i18n', // Пример, если используется i18n
             // 'axios', // Пример, если используется axios
         ],
@@ -31,14 +16,7 @@ module.exports = configure(function (/* ctx */) {
 
         // https://v2.quasar.dev/quasar-cli-vite/prefetch-feature
         extras: [
-            // 'ionicons-v4',
-            // 'mdi-v5',
             'fontawesome-v6',
-            // 'eva-icons',
-            // 'themify',
-            // 'line-awesome',
-            // 'roboto-font-latin-ext', // Расширение шрифта Roboto для латиницы
-
             'roboto-font', // Основной шрифт Roboto
             'material-icons', // Набор иконок Material Design
         ],
@@ -52,31 +30,18 @@ module.exports = configure(function (/* ctx */) {
 
             vueRouterMode: 'hash', // Используем hash режим для роутера в Electron
 
-            // // Vite plugin options -> https://vitejs.dev/config/#plugins-options
-            // vitePlugins: [
-            //   // Здесь можно добавить плагины Vite, если необходимо
-            // ]
         },
 
         // Full list of options: https://v2.quasar.dev/quasar-cli-vite/quasar-config-js#devServer
         devServer: {
             // https: true
+            port: 3030,
             open: false // Не открывать браузер автоматически, так как это Electron приложение
         },
 
         // https://v2.quasar.dev/quasar-cli-vite/quasar-config-js#framework
         framework: {
             config: {},
-
-            // iconSet: 'material-icons', // Quasar icon set
-            // lang: 'en-US', // Quasar language pack
-
-            // For special cases outside of where the auto-import strategy can have an impact
-            // (like functional components as one of the examples),
-            // you can manually specify Quasar components/directives to be available everywhere:
-            //
-            // components: [],
-            // directives: [],
 
             // Quasar plugins
             plugins: [
@@ -102,44 +67,9 @@ module.exports = configure(function (/* ctx */) {
         //   electronPreload: 'src-electron/electron-preload'
         // },
 
-        // https://v2.quasar.dev/quasar-cli-vite/developing-electron-apps/configuring-electron
-        // Не используем встроенную конфигурацию Electron Quasar CLI,
-        // так как мы используем Electron Forge. Настройка будет в forge.config.ts
+
         electron: {
-            // bundler: 'packager', // 'packager' или 'builder'
 
-            // packager: {
-            //   // https://github.com/electron-userland/electron-packager/blob/master/docs/api.md#options
-            //
-            //   // OS X / Mac App Store
-            //   // appBundleId: '',
-            //   // appCategoryType: '',
-            //   // osxSign: '',
-            //   // protocol: 'myapp://path',
-            //
-            //   // Windows only
-            //   // win32metadata: { ... }
-            // },
-
-            // builder: {
-            //   // https://www.electron.build/configuration/configuration
-            //
-            //   appId: 'tradingstar30_launcher'
-            // },
-
-            // Electron Main process configuration
-            // extendElectronMainConf (cfg) {
-            //   // do something with Electron main process Webpack cfg
-            //   // chainWebpackMain (chain) {}
-            //   // extendWebpackMain (cfg) {}
-            // },
-
-            // Electron Preload scripts configuration
-            // extendElectronPreloadConf (cfg) {
-            //   // do something with Electron preload scripts Webpack cfg
-            //   // chainWebpackPreload (chain) {}
-            //   // extendWebpackPreload (cfg) {}
-            // }
         },
 
         // https://v2.quasar.dev/quasar-cli-vite/developing-browser-extensions/configuring-bex
@@ -152,4 +82,4 @@ module.exports = configure(function (/* ctx */) {
             // extendBexManifestJson (json) {}
         }
     }
-}); 
+});

@@ -5,17 +5,21 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="b4a9eb72-d730-429a-8793-6a3fa5e78d78" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.github/workflows/build-electron.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/build-electron.yml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/boot/pinia.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/electron-api.d.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/stores/app.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/forge.config.ts" beforeDir="false" afterPath="$PROJECT_DIR$/forge.config.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/quasar.config.js" beforeDir="false" afterPath="$PROJECT_DIR$/quasar.config.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-electron/electron-main.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src-electron/electron-main.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-electron/electron-preload.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src-electron/electron-preload.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/App.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/App.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/env.d.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/env.d.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/electron-preload.ts" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/src/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/index.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tsconfig.json" beforeDir="false" afterPath="$PROJECT_DIR$/tsconfig.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/webpack.main.config.ts" beforeDir="false" afterPath="$PROJECT_DIR$/webpack.main.config.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/webpack.plugins.ts" beforeDir="false" afterPath="$PROJECT_DIR$/webpack.plugins.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/render.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/render.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -57,6 +61,7 @@
     &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
     &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
     &quot;npm.start.executor&quot;: &quot;Run&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;/Users/G992/WebstormProjects/TradingStar30_Launcher/node_modules/typescript/lib&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
@@ -92,7 +97,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1743697917364</updated>
-      <workItem from="1743697918625" duration="5469000" />
+      <workItem from="1743697918625" duration="11394000" />
     </task>
     <servers />
   </component>
