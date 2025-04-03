@@ -98,9 +98,11 @@ export const useAppStore = defineStore('app', () => {
 
         // Подписываемся на вывод приложения (electronAPI точно существует здесь из-за проверки выше)
         electronAPI.onAppOutput((message) => {
-            appOutput.value.unshift(message);
-            if (appOutput.value.length > 200) {
-                appOutput.value.pop();
+            // Добавляем сообщение в конец массива
+            appOutput.value.push(message);
+            // Удаляем старые сообщения, если превышен лимит 500
+            while (appOutput.value.length > 500) {
+                appOutput.value.shift(); // Удаляем самый старый (первый) элемент
             }
         });
 

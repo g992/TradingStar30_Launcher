@@ -43,8 +43,9 @@
             <!-- Используем q-scroll-area для прокрутки и q-list для отображения -->
             <q-scroll-area style="height: 300px;" ref="logScrollAreaRef">
               <q-list dense separator>
+                <!-- Итерируем по перевернутому массиву логов -->
                 <q-item
-                  v-for="(log, index) in appStore.appOutput"
+                  v-for="(log, index) in reversedLogs"
                   :key="index"
                   :class="{ 'text-negative': log.startsWith('ERROR:') }"
                 >
@@ -68,8 +69,6 @@
         </q-card-section>
 
         <q-card-section class="q-pt-none q-gutter-y-md">
-          <!-- Путь к приложению -->
-          <div class="text-caption">Путь к приложению TradingStar 3</div>
           <div class="row items-center no-wrap">
             <q-input
               :model-value="appStore.appPath"
@@ -145,10 +144,17 @@ const canStartApp = computed(() => {
   return !!appStore.appPath && !!appStore.apiKey;
 });
 
-// --- Автоматическая прокрутка логов вниз ---
+// Вычисляемое свойство для отображения логов в обратном порядке
+const reversedLogs = computed(() => {
+  // Создаем копию и переворачиваем, чтобы не мутировать исходный массив
+  return [...appStore.appOutput].reverse();
+});
+
+// --- Автоматическая прокрутка логов вверх ---
 watch(() => appStore.appOutput, async () => {
   await nextTick();
-  logScrollAreaRef.value?.setScrollPercentage('vertical', 1, 300);
+  // Прокручиваем вверх (к новым сообщениям)
+  logScrollAreaRef.value?.setScrollPercentage('vertical', 0, 100); // 100ms анимация
 }, { deep: true });
 // --- Конец автопрокрутки ---
 
@@ -222,4 +228,4 @@ const confirmStopApp = () => {
 }
 </style>
 
-<!-- Комментарии про app.scss и style можно убрать, если они больше не релевантны --> 
+<!-- Комментарии про app.scss и style можно убрать, если они больше не релевантны -->
