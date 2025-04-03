@@ -7,6 +7,11 @@
     <list default="true" id="b4a9eb72-d730-429a-8793-6a3fa5e78d78" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.github/workflows/build-electron.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/build-electron.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/forge.config.ts" beforeDir="false" afterPath="$PROJECT_DIR$/forge.config.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/webpack.plugins.ts" beforeDir="false" afterPath="$PROJECT_DIR$/webpack.plugins.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -83,7 +88,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1743697917364</updated>
-      <workItem from="1743697918625" duration="3465000" />
+      <workItem from="1743697918625" duration="3985000" />
     </task>
     <servers />
   </component>
