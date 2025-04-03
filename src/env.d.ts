@@ -8,6 +8,17 @@ declare module '*.vue' {
     export default component;
 }
 
+// --- Добавляем глобальный интерфейс для Electron API --- 
+declare global {
+    interface Window {
+        electronAPI?: {
+            selectDirectory: () => Promise<string | undefined>;
+            // Другие методы API можно будет добавить сюда
+        };
+    }
+}
+// --- Конец добавления интерфейса ---
+
 // Дополнительно можно объявить здесь глобальные типы, если они нужны,
 // например, типы для переменных окружения, если бы они использовались в коде клиента.
 // declare global {
