@@ -10,6 +10,9 @@ on:
 jobs:
   build:
     runs-on: ${{ matrix.os }} # Запускать на разных ОС
+    # Добавляем права на запись для коммитов и тегов
+    permissions:
+      contents: write
 
     strategy:
       matrix:
