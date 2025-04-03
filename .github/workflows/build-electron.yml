@@ -53,7 +53,7 @@ jobs:
           # GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Можно добавить другие переменные окружения, если они нужны для сборки
 
-      # Шаг для загрузки артефактов сборки
+      # Шаг для загрузки артефактов сборки (оставляем для скачивания из Actions)
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -69,51 +69,29 @@ jobs:
             out/make/**/*.AppImage
             !out/make/**/RELEASES* # Исключаем файлы RELEASES, если они не нужны
           # retention-days: 5 # Опционально: сколько дней хранить артефакты
+          if-no-files-found: warn # Предупреждать, если файлы не найдены, но не падать
 
-      # Опционально: Шаг для создания релиза GitHub (только для master)
-      - name: Create GitHub Release
+      # ЗАМЕНЯЕМ СТАРЫЕ ШАГИ РЕЛИЗА НА ЭТОТ:
+      - name: Create Release and Upload Assets
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v2 # Используем этот action
         with:
-          tag_name: ${{ steps.tag_version.outputs.new_tag }} # Используем тег, созданный на шаге bump version
-          release_name: Release ${{ steps.tag_version.outputs.new_tag }}
-          body: | # Описание релиза (можно генерировать автоматически)
+          tag_name: ${{ steps.tag_version.outputs.new_tag }} # Тег из шага версионирования
+          name: Release ${{ steps.tag_version.outputs.new_tag }} # Имя релиза
+          body: | # Описание релиза
             Автоматический релиз версии ${{ steps.tag_version.outputs.new_tag }}
           draft: false
           prerelease: false
-
-      # Опционально: Шаг для загрузки артефактов в релиз GitHub (только для master)
-      - name: Upload Release Assets
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-        uses: actions/upload-release-asset@v1
+          # Указываем маску для файлов, которые нужно загрузить в релиз
+          # Ищет все основные типы установочных файлов в папке out/make и ее подпапках
+          files: |
+            out/make/**/*.deb
+            out/make/**/*.rpm
+            out/make/**/*.zip
+            out/make/**/*.exe
+            out/make/**/*.msi
+            out/make/**/*.AppImage
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          # Перебираем и загружаем все нужные артефакты из папки out/make
-          # Используем find для поиска файлов нужных типов
-          asset_path: |
-            ${{ github.workspace }}/out/make # Пример поиска .deb файла
-          asset_name: |
-             # Имя файла в релизе (можно настроить)
-             electron-app-${{ matrix.os }}-${{ steps.tag_version.outputs.new_tag }} # Пример
-          asset_content_type: application/octet-stream # Общий тип для бинарных файлов
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Токен обязателен
 
-          # Нужно будет настроить asset_path и asset_name для каждого типа файла (.exe, .deb, .AppImage и т.д.)
-          # или использовать скрипт для автоматизации загрузки всех найденных артефактов.
-          # Пример для Windows (.exe):
-          # asset_path: ${{ github.workspace }}/out/make/squirrel.windows/x64/*.exe
-          # asset_name: my-app-${{ steps.tag_version.outputs.new_tag }}.exe
-          # asset_content_type: application/vnd.microsoft.portable-executable
-
-          # Пример для Linux (.AppImage):
-          # asset_path: ${{ github.workspace }}/out/make/*.AppImage
-          # asset_name: my-app-${{ steps.tag_version.outputs.new_tag }}.AppImage
-          # asset_content_type: application/vnd.appimage
-
-          # Из-за ограничений actions/upload-release-asset (загружает только один файл за шаг)
-          # может потребоваться несколько таких шагов или использование другого action/скрипта.
-          # Например, action "softprops/action-gh-release" позволяет загружать несколько файлов по маске. 
+      # Старые шаги Create GitHub Release и Upload Release Assets УДАЛЕНЫ 
