@@ -13,8 +13,8 @@ import 'src/css/app.scss'; // Ваши основные стили
 import App from 'src/App.vue';
 import createRouter from './router'; // Изменили путь
 
-// Импортируем наш boot-файл Pinia
-import piniaBoot from './boot/pinia';
+// Импортируем наш boot-файл Pinia и тип
+import piniaBoot, { ManualBootParams } from './boot/pinia';
 
 console.log('[Render] Начало render.ts');
 
@@ -24,7 +24,7 @@ const router = createRouter(); // Создаем экземпляр роутер
 console.log('[Render] Приложение создано');
 
 // Вручную вызываем логику boot-файла Pinia
-piniaBoot({ app }); // Передаем экземпляр app
+piniaBoot({ app }); // Убрали явное приведение типа
 
 console.log('[Render] Pinia boot выполнен');
 
