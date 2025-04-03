@@ -3,6 +3,7 @@
   "productName": "tradingstar30_launcher",
   "version": "1.0.0",
   "description": "My Electron application description",
+  "author": "G992",
   "main": ".webpack/main",
   "scripts": {
     "start": "electron-forge start",
