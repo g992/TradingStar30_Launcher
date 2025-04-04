@@ -68,37 +68,45 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Используем tauri-action для установки Node, Rust, зависимостей WebView2 и т.д.
-      - name: Setup Tauri Action
-        uses: tauri-apps/tauri-action@v0
+      # --- Явная установка Node.js ---
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          nodeVersion: 20 # Указываем версию Node.js
+          node-version: 20.x # Или lts/*
+          cache: 'npm'
 
+      # --- Явная установка Rust ---
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      # --- Установка зависимостей фронтенда ---
       - name: Install frontend dependencies
-        # tauri-action уже установил Node.js
         run: npm ci
 
-      - name: Build Tauri app
-        # Используем скрипт из package.json. Флаг --release для оптимизированной сборки.
-        # tauri-action настроит переменные окружения, если нужны секреты для подписи и т.д.
-        run: npm run tauri:build -- --release
+      # --- Сборка с помощью tauri-action ---
+      - name: Build Tauri app via tauri-action
+        uses: tauri-apps/tauri-action@v0
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Часто требуется для tauri-action
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Указываем, как запускать скрипты Tauri (без команды build)
+          # Должно быть просто 'npm run'
+          tauriScript: 'npm run'
+          # Указываем имя скрипта ('tauri:build') и флаги ('--release') как аргументы
+          args: 'tauri:build --release'
 
+      # --- Ручное архивирование и загрузка остаются ---
       - name: Archive Windows standalone build
         shell: pwsh # Используем PowerShell для архивации
         run: |
-          # Создаем архив из содержимого папки release, исключая папку bundle и .pdb файлы
           Compress-Archive -Path "src-tauri/target/release/*" -DestinationPath "trading-star-launcher-${{ needs.version_bump.outputs.new_version }}-windows-x64-portable.zip" -Exclude "bundle/*", "*.pdb" -Force
 
       - name: Upload Windows portable artifact
         uses: actions/upload-artifact@v4
         with:
-          # Даем артефакту понятное имя
           name: windows-portable-app
-          # Указываем путь к созданному ZIP-архиву
           path: trading-star-launcher-${{ needs.version_bump.outputs.new_version }}-windows-x64-portable.zip
-          if-no-files-found: error # Завершить с ошибкой, если архив не найден
+          if-no-files-found: error
 
   # --- Измененная задача создания релиза ---
   create_release:
