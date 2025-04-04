@@ -140,6 +140,10 @@ jobs:
         # Не указываем имя, чтобы скачать все артефакты
         # Артефакты будут в папках с именами electron-app-ubuntu-latest, electron-app-windows-latest
 
+      # Отладочный шаг: посмотреть содержимое рабочей директории
+      - name: List downloaded files
+        run: ls -R
+
       - name: Create Release and Upload Assets
         uses: softprops/action-gh-release@v2
         with:
@@ -152,8 +156,7 @@ jobs:
           draft: false
           prerelease: false
           # Указываем путь к файлам внутри папок, созданных download-artifact
-          files: |
-            electron-app-ubuntu-latest/*
-            electron-app-windows-latest/*
+          # Используем единый паттерн для захвата всех файлов в обеих папках
+          files: electron-app-*/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
