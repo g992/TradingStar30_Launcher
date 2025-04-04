@@ -5,11 +5,34 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="b4a9eb72-d730-429a-8793-6a3fa5e78d78" name="Changes" comment="chore: обновлены конфигурации и добавлены новые типы для поддержки Electron">
-      <change beforePath="$PROJECT_DIR$/.github/workflows/build-electron.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/build-electron.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.eslintrc.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/icons/favicon.ico" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/icons/favicon.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/forge.config.ts" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-electron/electron-main.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src-electron/electron-main.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/quasar.config.js" beforeDir="false" afterPath="$PROJECT_DIR$/quasar.config.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-electron/electron-app.d.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-electron/electron-env.d.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-electron/electron-main.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-electron/electron-preload.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-electron/icons/icon.icns" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-electron/icons/icon.ico" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-electron/icons/icon.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/App.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/App.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/electron-api.d.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/env.d.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/env.d.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/index.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/render.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/stores/app.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/stores/app.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tsconfig.json" beforeDir="false" afterPath="$PROJECT_DIR$/tsconfig.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/webpack.main.config.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/webpack.plugins.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/webpack.renderer.config.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/webpack.rules.ts" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -44,7 +67,7 @@
   &quot;keyToString&quot;: {
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;tauri&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
@@ -87,7 +110,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1743697917364</updated>
-      <workItem from="1743697918625" duration="16283000" />
+      <workItem from="1743697918625" duration="18328000" />
     </task>
     <task id="LOCAL-00001" summary="chore: обновлены конфигурации и добавлены новые типы для поддержки Electron">
       <option name="closed" value="true" />

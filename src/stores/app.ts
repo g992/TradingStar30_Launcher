@@ -1,21 +1,86 @@
 import { defineStore } from 'pinia';
-import { ref } from 'vue';
-import { useQuasar } from 'quasar'; // Импортируем useQuasar для уведомлений
-import { ElectronAPI } from 'src/electron-api'; // Используем абсолютный путь
+import { ref, onUnmounted } from 'vue';
+import { useQuasar } from 'quasar';
+import { invoke } from '@tauri-apps/api/core';
+import { listen, UnlistenFn } from '@tauri-apps/api/event';
 
 // Ключи для localStorage
 const API_KEY_STORAGE_KEY = 'tradingStarApiKey';
 const APP_PATH_STORAGE_KEY = 'tradingStarAppPath';
 
-
 export const useAppStore = defineStore('app', () => {
-    const $q = useQuasar(); // Для уведомлений
+    const $q = useQuasar();
 
     // --- Состояние ---
     const apiKey = ref('');
     const appPath = ref('');
-    const isRunning = ref(false); // Статус запущенного приложения
-    const appOutput = ref<string[]>([]); // Массив для хранения вывода приложения
+    const isRunning = ref(false);
+    const appOutput = ref<string[]>([]);
+
+    // --- Слушатели событий Tauri ---
+    let unlistenOutput: UnlistenFn | null = null;
+    let unlistenError: UnlistenFn | null = null;
+    let unlistenTerminated: UnlistenFn | null = null;
+
+    /**
+     * Регистрирует слушатели для событий от Rust бэкенда.
+     */
+    const registerEventListeners = async () => {
+        // Отписываемся от старых, если они есть
+        await unregisterEventListeners();
+
+        unlistenOutput = await listen<{ message: string }>('app-output', (event) => {
+            appOutput.value.push(event.payload.message);
+            while (appOutput.value.length > 500) {
+                appOutput.value.shift();
+            }
+            // Устанавливаем isRunning в true при получении первого вывода, если еще не установлено
+            // Это может быть не идеально, но дает обратную связь, что процесс что-то делает
+            if (!isRunning.value) {
+                console.log('[Store] Process activity detected via output.');
+                isRunning.value = true;
+            }
+        });
+
+        unlistenError = await listen<{ message: string }>('app-error', (event) => {
+            console.error('[Store] Received app-error event:', event.payload.message);
+            $q.notify({ type: 'negative', message: `Ошибка приложения: ${event.payload.message}` });
+            // Можно добавить логику для остановки isRunning при определенных ошибках
+        });
+
+        unlistenTerminated = await listen<{ message: string }>('app-terminated', (event) => {
+            console.log('[Store] Received app-terminated event:', event.payload.message);
+            isRunning.value = false;
+            $q.notify({ type: 'info', message: `Приложение завершилось: ${event.payload.message}` });
+        });
+        console.log('[Store] Tauri event listeners registered.');
+    };
+
+    /**
+     * Отписывается от слушателей событий Tauri.
+     */
+    const unregisterEventListeners = async () => {
+        if (unlistenOutput) {
+            unlistenOutput();
+            unlistenOutput = null;
+        }
+        if (unlistenError) {
+            unlistenError();
+            unlistenError = null;
+        }
+        if (unlistenTerminated) {
+            unlistenTerminated();
+            unlistenTerminated = null;
+        }
+        console.log('[Store] Tauri event listeners unregistered.');
+    };
+
+    // Автоматическая регистрация слушателей при создании store
+    // и отписка при уничтожении компонента (если store используется в setup)
+    registerEventListeners();
+    onUnmounted(() => {
+        unregisterEventListeners();
+    });
 
     // --- Действия ---
 
@@ -41,13 +106,13 @@ export const useAppStore = defineStore('app', () => {
     const saveSettings = () => {
         try {
             localStorage.setItem(APP_PATH_STORAGE_KEY, appPath.value);
-            localStorage.setItem(API_KEY_STORAGE_KEY, apiKey.value); // Сохраняем и ключ
+            localStorage.setItem(API_KEY_STORAGE_KEY, apiKey.value);
             console.log('Настройки сохранены:', { path: appPath.value, apiKey: apiKey.value ? '***' : 'пусто' });
-            $q.notify({ type: 'positive', message: 'Настройки сохранены.' }); // Уведомление
+            $q.notify({ type: 'positive', message: 'Настройки сохранены.' });
         } catch (error) {
             console.error('Ошибка при сохранении настроек в localStorage:', error);
             const message = error instanceof Error ? error.message : String(error);
-            $q.notify({ type: 'negative', message: `Ошибка сохранения: ${message}` }); // Уведомление об ошибке
+            $q.notify({ type: 'negative', message: `Ошибка сохранения: ${message}` });
         }
     };
 
@@ -68,15 +133,10 @@ export const useAppStore = defineStore('app', () => {
     };
 
     /**
-     * Запускает приложение TradingStar через Electron main процесс.
+     * Запускает приложение TradingStar через Rust команду.
      */
     const startApp = async () => {
-        // Получаем доступ к API непосредственно перед использованием
-        const electronAPI = window.electronAPI as ElectronAPI | undefined;
-        // Логируем полученный объект API
-        console.log('[Store startApp] window.electronAPI:', electronAPI);
-
-        // --- Проверки --- 
+        // --- Проверки ---
         if (!appPath.value) {
             $q.notify({ type: 'warning', message: 'Путь к приложению не указан.' });
             return;
@@ -85,99 +145,68 @@ export const useAppStore = defineStore('app', () => {
             $q.notify({ type: 'warning', message: 'API ключ не указан.' });
             return;
         }
-        // Проверяем наличие API и метода
-        if (!electronAPI?.startAppProcess || !electronAPI.onAppOutput || !electronAPI.removeAppOutputListener) {
-            console.error('API Electron (startAppProcess/onAppOutput/removeAppOutputListener) не доступно.');
-            $q.notify({ type: 'negative', message: 'Функция запуска/обработки вывода приложения недоступна.' });
+        // Проверка isRunning для предотвращения двойного запуска
+        if (isRunning.value) {
+            $q.notify({ type: 'warning', message: 'Приложение уже запущено (согласно флагу isRunning).' });
             return;
         }
         // --- Конец проверок ---
 
-        console.log(`[Store] Запрос на запуск приложения: ${appPath.value}`);
+        console.log(`[Store] Вызов Rust команды start_external_app: ${appPath.value}`);
         appOutput.value = []; // Очищаем предыдущий вывод
-
-        // Подписываемся на вывод приложения (electronAPI точно существует здесь из-за проверки выше)
-        electronAPI.onAppOutput((message) => {
-            // Добавляем сообщение в конец массива
-            appOutput.value.push(message);
-            // Удаляем старые сообщения, если превышен лимит 500
-            while (appOutput.value.length > 500) {
-                appOutput.value.shift(); // Удаляем самый старый (первый) элемент
-            }
-        });
+        // Регистрация слушателей (на случай, если они отписались)
+        await registerEventListeners();
 
         try {
             $q.loading.show({ message: 'Запуск TradingStar 3...' });
-            // electronAPI.startAppProcess точно существует
-            const result = await electronAPI.startAppProcess(appPath.value, apiKey.value);
-
-            if (result.success) {
-                isRunning.value = true;
-                console.log('[Store] Приложение успешно запущено (согласно ответу main процесса).');
-                $q.notify({ type: 'positive', message: 'TradingStar 3 запущен.' });
-            } else {
-                console.error('[Store] Ошибка запуска приложения:', result.message);
-                isRunning.value = false;
-                $q.notify({ type: 'negative', message: result.message || 'Не удалось запустить приложение.' });
-                // Отписываемся при ошибке (electronAPI.removeAppOutputListener точно существует)
-                electronAPI.removeAppOutputListener();
-            }
+            await invoke('start_external_app', { appPath: appPath.value, apiKey: apiKey.value });
+            // Не устанавливаем isRunning здесь, ждем события app-output или app-terminated
+            console.log('[Store] Команда start_external_app вызвана успешно.');
+            $q.notify({ type: 'positive', message: 'Команда запуска TradingStar 3 отправлена.' });
+            // isRunning установится при получении первого 'app-output'
         } catch (error) {
-            console.error('[Store] Критическая ошибка при вызове startAppProcess:', error);
-            isRunning.value = false;
-            const message = error instanceof Error ? error.message : String(error);
-            $q.notify({ type: 'negative', message: `Ошибка IPC: ${message}` });
-            // Отписываемся при ошибке (electronAPI?.removeAppOutputListener существует, если electronAPI существует)
-            electronAPI?.removeAppOutputListener(); // Оставляем ? на всякий случай, хотя не должно быть null
+            console.error('[Store] Ошибка при вызове команды start_external_app:', error);
+            isRunning.value = false; // Сбрасываем, если вызов команды не удался
+            const message = typeof error === 'string' ? error : (error instanceof Error ? error.message : 'Неизвестная ошибка');
+            $q.notify({ type: 'negative', message: `Ошибка запуска: ${message}` });
+            await unregisterEventListeners(); // Отписываемся при ошибке запуска
         } finally {
-            $q.loading.hide();
+            // Не скрываем загрузку сразу, скрытие будет при ошибке или завершении
+            // Но можно добавить таймаут для скрытия, если процесс долго не отвечает
+            if (!isRunning.value) { // Скрываем, если запуск сразу провалился
+                $q.loading.hide();
+            }
         }
     };
 
     /**
-     * Останавливает приложение TradingStar через Electron main процесс.
+     * Останавливает приложение TradingStar через Rust команду.
      */
     const stopApp = async () => {
-        // Получаем доступ к API непосредственно перед использованием
-        const electronAPI = window.electronAPI as ElectronAPI | undefined;
-
-        // Проверяем наличие API и метода
-        if (!electronAPI?.stopAppProcess || !electronAPI.removeAppOutputListener) {
-            console.error('API Electron (stopAppProcess/removeAppOutputListener) не доступно.');
-            $q.notify({ type: 'negative', message: 'Функция остановки приложения недоступна.' });
+        // Проверяем по флагу, есть ли смысл останавливать
+        if (!isRunning.value) {
+            $q.notify({ type: 'warning', message: 'Приложение не запущено (согласно флагу isRunning).' });
             return;
         }
 
-        console.log('[Store] Запрос на остановку приложения...');
+        console.log('[Store] Вызов Rust команды kill_external_app...');
         try {
             $q.loading.show({ message: 'Остановка TradingStar 3...' });
-            // electronAPI.stopAppProcess точно существует
-            await electronAPI.stopAppProcess();
-            isRunning.value = false; // Считаем остановленным сразу после запроса
-            console.log('[Store] Запрос на остановку отправлен.');
-            $q.notify({ type: 'info', message: 'Запрос на остановку TradingStar 3 отправлен.' });
-            // Отписываемся (electronAPI.removeAppOutputListener точно существует)
-            electronAPI.removeAppOutputListener();
+            await invoke('kill_external_app');
+            console.log('[Store] Команда kill_external_app вызвана успешно.');
+            $q.notify({ type: 'info', message: 'Команда остановки TradingStar 3 отправлена.' });
+            // isRunning сбросится при получении события 'app-terminated'
         } catch (error) {
-            console.error('[Store] Ошибка при вызове stopAppProcess:', error);
-            const message = error instanceof Error ? error.message : String(error);
+            console.error('[Store] Ошибка при вызове команды kill_external_app:', error);
+            const message = typeof error === 'string' ? error : (error instanceof Error ? error.message : 'Неизвестная ошибка');
+            // В случае ошибки остановки, возможно, стоит попробовать сбросить isRunning
             isRunning.value = false;
-            $q.notify({ type: 'negative', message: `Ошибка IPC при остановке: ${message}` });
-            // Отписываемся при ошибке (electronAPI?.removeAppOutputListener существует, если electronAPI существует)
-            electronAPI?.removeAppOutputListener(); // Оставляем ? на всякий случай
+            $q.notify({ type: 'negative', message: `Ошибка остановки: ${message}` });
+            await unregisterEventListeners(); // Отписываемся при ошибке остановки
         } finally {
             $q.loading.hide();
         }
     };
-
-    // --- Слушатель завершения процесса из Main ---
-    // Нужно зарегистрировать слушатель в App.vue или другом месте,
-    // где есть доступ к жизненному циклу компонента
-    const setupAppLifecycleListeners = () => {
-        // Пример: ipcRenderer.on('app-stopped', () => { isRunning.value = false; });
-        // ipcRenderer.on('app-error', (message) => { /* обработка ошибки запуска */ });
-        // Лучше сделать это через electronAPI, как onAppOutput
-    }
 
     return {
         apiKey,
@@ -190,6 +219,5 @@ export const useAppStore = defineStore('app', () => {
         setApiKey,
         startApp,
         stopApp,
-        // setupAppLifecycleListeners // Пока не используется напрямую
     };
 }); 
