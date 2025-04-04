@@ -1,49 +1,10 @@
 {
+  "extends": "@quasar/app-vite/tsconfig-preset",
   "compilerOptions": {
-    "target": "ESNext",
-    "allowJs": true,
-    "module": "CommonJS",
-    "skipLibCheck": true,
-    "esModuleInterop": true,
-    "noImplicitAny": false,
-    "sourceMap": true,
     "baseUrl": ".",
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "paths": {
-      "src/*": [
-        "src/*"
-      ],
-      "quasar": [
-        "node_modules/quasar/*"
-      ]
-    },
-    "lib": [
-      "esnext",
-      "dom",
-      "dom.iterable",
-      "scripthost"
-    ],
-    "jsx": "preserve",
-    "allowSyntheticDefaultImports": true,
-    "forceConsistentCasingInFileNames": true,
-    "strict": true,
-    "noEmit": true,
-    "isolatedModules": true
-  },
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "src/**/*.vue",
-    "src-electron/**/*.ts",
-    "src-electron/**/*.d.ts",
-    "tests/**/*.ts",
-    "tests/**/*.tsx",
-    "./*.ts",
-    "src/env.d.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    ".webpack"
-  ]
+    "types": [
+      "@quasar/app-vite/types",
+      "@tauri-apps/api"
+    ]
+  }
 }

@@ -114,11 +114,7 @@ import { ref, onMounted, computed, watch, nextTick } from 'vue';
 import { QLayout, QHeader, QPageContainer, QPage, QDialog, QCard, QCardSection, QCardActions, QBtn, QToolbar, QToolbarTitle, QInput, useQuasar, QScrollArea, QList, QItem, QItemSection, QSeparator } from 'quasar';
 import { useAppStore } from './stores/app';
 import AnsiToHtml from 'ansi-to-html';
-
-// Define the expected shape of the injected API
-interface ElectronAPI {
-  selectDirectory: () => Promise<string | undefined>;
-}
+import { open } from '@tauri-apps/plugin-dialog';
 
 // Создаем экземпляр конвертера (можно настроить цвета при желании)
 const ansiConverter = new AnsiToHtml({ fg: '#bbb', bg: 'transparent', newline: false, escapeXML: true });
@@ -164,25 +160,29 @@ const openSettingsDialog = () => {
 
 const selectAppPath = async () => {
   console.log('Запрос выбора пути к приложению...');
-  const api = window.electronAPI as unknown as ElectronAPI | undefined;
-  console.log('window.electronAPI', api);
+  try {
+    // Используем Tauri API для выбора файла
+    const selectedPath = await open({
+      // multiple: false, // По умолчанию false
+      // directory: false, // По умолчанию false, выбираем файл
+      title: 'Выберите исполняемый файл TradingStar 3'
+      // Можно добавить фильтры, если нужно
+      // filters: [{
+      //   name: 'Application',
+      //   extensions: ['exe', 'app'] // Пример для Windows/Mac
+      // }]
+    });
 
-  if (api && api.selectDirectory) {
-    try {
-      const selectedPath = await api.selectDirectory();
-      if (selectedPath) {
-        appStore.setAppPath(selectedPath);
-        console.log('Выбран путь:', selectedPath);
-      } else {
-        console.log('Выбор пути отменен пользователем.');
-      }
-    } catch (error) {
-      console.error('Ошибка при выборе файла:', error);
-      $q.notify({ type: 'negative', message: 'Ошибка при выборе пути к приложению.' });
+    if (selectedPath && typeof selectedPath === 'string') {
+      // Убеждаемся, что выбран один файл (не массив и не null)
+      appStore.setAppPath(selectedPath);
+      console.log('Выбран путь:', selectedPath);
+    } else {
+      console.log('Выбор пути отменен или результат недействителен.');
     }
-  } else {
-    console.warn('API Electron (selectDirectory) не доступно.');
-    $q.notify({ type: 'warning', message: 'Функция выбора пути недоступна.' });
+  } catch (error) {
+    console.error('Ошибка при выборе файла через Tauri API:', error);
+    $q.notify({ type: 'negative', message: 'Ошибка при выборе пути к приложению.' });
   }
 };
 

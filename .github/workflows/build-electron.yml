@@ -1,28 +1,26 @@
-name: Build Electron App
+name: Build Tauri App & Release
 
 on:
   push:
-    branches: [ master ] # Запускать для релизов только при пуше в master
+    branches: [ master ] # Запускать при пуше в master
   pull_request:
     branches: [ master ]
   workflow_dispatch:
 
 jobs:
   version_bump:
-    # Запускается только при пуше в master
+    # Эта задача остается без изменений (управляет версией и тегом)
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     outputs:
       new_version: ${{ steps.extract_version.outputs.new_version }}
       new_tag: ${{ steps.extract_version.outputs.new_tag }}
-    # Права на запись для коммита и тега
     permissions:
       contents: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          # Нужна полная история для определения версии и тегов
           fetch-depth: 0
 
       - name: Setup Node.js
@@ -42,88 +40,100 @@ jobs:
       - name: Bump version using npm and create tag
         id: version_bump_npm
         run: |
-          # Увеличиваем патч-версию, создаем коммит и тег (формат тега по умолчанию vX.Y.Z)
-          # Сообщение коммита включает [skip ci] для предотвращения зацикливания
-          # Флаг --force используется на случай наличия некритичных изменений в workdir после npm ci
           npm version patch --force -m "chore(release): %s [skip ci]"
 
       - name: Push changes and tags
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Отправляем коммит и новый тег в ветку master
           git push origin master --follow-tags
 
       - name: Extract new version and tag
         id: extract_version
         run: |
-          # Извлекаем версию из package.json
           VERSION=$(jq -r .version package.json)
           echo "new_version=$VERSION" >> $GITHUB_OUTPUT
-          # Получаем самый свежий тег (созданный npm version)
           TAG_NAME=$(git describe --tags --abbrev=0)
           echo "new_tag=${TAG_NAME}" >> $GITHUB_OUTPUT
 
-  build:
+  # --- Измененная задача сборки ---
+  build_windows_portable:
     needs: version_bump
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-        node-version: [20.x]
+    runs-on: windows-latest # Запускаем только на Windows
     permissions:
-      contents: read 
+      contents: read # Для checkout и tauri-action
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+      # Используем tauri-action для установки Node, Rust, зависимостей WebView2 и т.д.
+      - name: Setup Tauri Action
+        uses: tauri-apps/tauri-action@v0
         with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'npm'
+          nodeVersion: 20 # Указываем версию Node.js
 
-      - name: Install dependencies
+      - name: Install frontend dependencies
+        # tauri-action уже установил Node.js
         run: npm ci
 
-      - name: Build Electron app
-        run: npm run make
+      - name: Build Tauri app
+        # Используем скрипт из package.json. Флаг --release для оптимизированной сборки.
+        # tauri-action настроит переменные окружения, если нужны секреты для подписи и т.д.
+        run: npm run tauri:build -- --release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Часто требуется для tauri-action
 
-      - name: Upload artifact
+      - name: Archive Windows standalone build
+        shell: pwsh # Используем PowerShell для архивации
+        run: |
+          # Создаем архив из содержимого папки release, исключая папку bundle и .pdb файлы
+          Compress-Archive -Path "src-tauri/target/release/*" -DestinationPath "trading-star-launcher-${{ needs.version_bump.outputs.new_version }}-windows-x64-portable.zip" -Exclude "bundle/*", "*.pdb" -Force
+
+      - name: Upload Windows portable artifact
         uses: actions/upload-artifact@v4
         with:
-          name: electron-app-${{ matrix.os }}
-          path: |
-            out/make/**/*.deb
-            out/make/**/*.rpm
-            out/make/**/*.zip
-            out/make/**/*.exe
-            out/make/**/*.msi
-            out/make/**/*.AppImage
-            !out/make/**/RELEASES*
-          if-no-files-found: warn
+          # Даем артефакту понятное имя
+          name: windows-portable-app
+          # Указываем путь к созданному ZIP-архиву
+          path: trading-star-launcher-${{ needs.version_bump.outputs.new_version }}-windows-x64-portable.zip
+          if-no-files-found: error # Завершить с ошибкой, если архив не найден
 
+  # --- Измененная задача создания релиза ---
   create_release:
-    needs: [version_bump, build]
+    needs: [version_bump, build_windows_portable] # Зависит от новой задачи сборки
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write # Для создания релиза и загрузки ассетов
+
     steps:
-      - name: Download all build artifacts
+      - name: Download Windows portable artifact
         uses: actions/download-artifact@v4
+        with:
+          # Скачиваем артефакт по имени, указанному при загрузке
+          name: windows-portable-app
+          # Указываем путь для скачивания (необязательно, по умолчанию корень)
+          path: release-assets
+
+      - name: Display structure of downloaded files # Опционально для отладки
+        run: ls -R release-assets
+
       - name: Create Release and Upload Assets
         uses: softprops/action-gh-release@v2
         with:
-          # Используем тег из outputs задачи version_bump
           tag_name: ${{ needs.version_bump.outputs.new_tag }}
-          # Используем версию из outputs задачи version_bump
           name: Release ${{ needs.version_bump.outputs.new_version }}
           body: |
             Автоматический релиз версии ${{ needs.version_bump.outputs.new_version }}
+
+            **Windows (Portable):**
+            Загрузите `trading-star-launcher-...-windows-x64-portable.zip`.
+            *Требует установленный [WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/).*
           draft: false
           prerelease: false
-          files: electron-app-*/**/*.zip
+          # Указываем паттерн для загрузки ZIP-архива из папки, куда он был скачан
+          files: release-assets/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
