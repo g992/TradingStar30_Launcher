@@ -2,64 +2,115 @@ name: Build Electron App
 
 on:
   push:
-    branches: [ master ] # Запускать при пуше в master
+    branches: [ master ] # Запускать для релизов только при пуше в master
+  # Оставляем PR и workflow_dispatch, но релиз будет создаваться только при пуше в master
   pull_request:
-    branches: [ master ] # Запускать при PR в master
-  workflow_dispatch: # Позволяет запускать вручную
+    branches: [ master ]
+  workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os }} # Запускать на разных ОС
-    # Добавляем права на запись для коммитов и тегов
+  # ========================================
+  # Задача 1: Увеличение версии и создание тега
+  # ========================================
+  version_bump:
+    # Запускается только при пуше в master
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    outputs:
+      new_version: ${{ steps.extract_version.outputs.new_version }}
+      new_tag: ${{ steps.extract_version.outputs.new_tag }}
+    # Права на запись для коммита и тега
     permissions:
       contents: write
-
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest] # Матрица для сборки под Linux и Windows
-        node-version: [20.x] # Используем Node.js LTS
-
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4 # Загружаем код репозитория
+        uses: actions/checkout@v4
+        with:
+          # Нужна полная история для определения версии и тегов
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x # Используем ту же версию Node.js
+          cache: 'npm'
+
+      - name: Install dependencies (required for npm version)
+        run: npm ci
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump version using npm and create tag
+        id: version_bump_npm
+        run: |
+          # Увеличиваем патч-версию, создаем коммит и тег (формат тега по умолчанию vX.Y.Z)
+          # Сообщение коммита включает [skip ci] для предотвращения зацикливания
+          # Флаг --force используется на случай наличия некритичных изменений в workdir после npm ci
+          npm version patch --force -m "chore(release): %s [skip ci]"
+
+      - name: Push changes and tags
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Отправляем коммит и новый тег в ветку master
+          git push origin master --follow-tags
+
+      - name: Extract new version and tag
+        id: extract_version
+        run: |
+          # Извлекаем версию из package.json
+          VERSION=$(jq -r .version package.json)
+          echo "new_version=$VERSION" >> $GITHUB_OUTPUT
+          # Получаем самый свежий тег (созданный npm version)
+          TAG_NAME=$(git describe --tags --abbrev=0)
+          echo "new_tag=${TAG_NAME}" >> $GITHUB_OUTPUT
+
+  # ========================================
+  # Задача 2: Сборка приложения (матрица ОС)
+  # ========================================
+  build:
+    # Зависит от задачи version_bump (но выполняется только если version_bump была запущена, т.е. при пуше в master)
+    # Если запуск не из-за пуша в master (PR, dispatch), эта зависимость неактивна, и сборка запустится
+    # Но релиз в конце все равно не будет создан
+    needs: version_bump
+    # Важно: Условие `if` на `needs` не работает так просто для пропуска.
+    # Чтобы сборка работала для PR/dispatch, а релиз нет, нужно немного изменить логику.
+    # ПРОСТОЙ ВАРИАНТ: Весь пайплайн (версия, сборка, релиз) работает только для push:master.
+    # Если нужна сборка для PR/dispatch без релиза, нужен отдельный workflow или более сложная логика 'if'.
+    # ОСТАВЛЯЕМ ПРОСТОЙ ВАРИАНТ: этот workflow отвечает за релиз при пуше в master.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node-version: [20.x]
+    permissions:
+      contents: read # Для сборки достаточно прав на чтение
+    steps:
+      - name: Checkout repository
+        # Код будет содержать уже обновленную версию из version_bump
+        uses: actions/checkout@v4
 
       - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'npm' # Кэшируем зависимости npm
+          cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci # Используем npm ci для быстрой и надежной установки
-
-      # Шаг для автоматического увеличения минорной версии (только для master)
-      - name: Bump version and push tag
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-        id: tag_version
-        # Используем действия для автоматического тегирования и версионирования
-        # Это действие увеличит минорную версию в package.json и создаст тег
-        uses: mathieudutour/github-tag-action@v6.2
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }} # Токен для push тегов
-          release_branches: master # Указываем ветку для релизов/тегов
-          tag_prefix: "" # Убираем префикс v, если не нужен
-          # Закомментировано: можно указать 'minor' явно, но по умолчанию он и так minor
-          # default_bump: minor
+        run: npm ci
 
       - name: Build Electron app
-        run: npm run make # Запускаем команду сборки Electron Forge
-        # env:
-          # Токен GitHub для публикации артефактов (если нужно настроить публикацию)
-          # GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Можно добавить другие переменные окружения, если они нужны для сборки
+        run: npm run make
 
-      # Шаг для загрузки артефактов сборки (оставляем для скачивания из Actions)
-      - name: Upload artifacts
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: electron-app-${{ matrix.os }} # Имя артефакта (например, electron-app-ubuntu-latest)
-          # Путь к собранным файлам (обычно в папке out)
-          # Проверьте ваш forge.config.ts или вывод `npm run make`, чтобы убедиться в правильности пути
+          # Имя артефакта включает ОС для различия
+          name: electron-app-${{ matrix.os }}
           path: |
             out/make/**/*.deb
             out/make/**/*.rpm
@@ -67,31 +118,42 @@ jobs:
             out/make/**/*.exe
             out/make/**/*.msi
             out/make/**/*.AppImage
-            !out/make/**/RELEASES* # Исключаем файлы RELEASES, если они не нужны
-          # retention-days: 5 # Опционально: сколько дней хранить артефакты
-          if-no-files-found: warn # Предупреждать, если файлы не найдены, но не падать
+            !out/make/**/RELEASES*
+          if-no-files-found: warn
+          # retention-days: 5 # Опционально
 
-      # ЗАМЕНЯЕМ СТАРЫЕ ШАГИ РЕЛИЗА НА ЭТОТ:
+  # ========================================
+  # Задача 3: Создание релиза на GitHub
+  # ========================================
+  create_release:
+    # Зависит от успешного завершения version_bump и всех сборок в матрице build
+    needs: [version_bump, build]
+    # Запускается только при пуше в master
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    permissions:
+      # Права на запись для создания релиза и загрузки ассетов
+      contents: write
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        # Не указываем имя, чтобы скачать все артефакты
+        # Артефакты будут в папках с именами electron-app-ubuntu-latest, electron-app-windows-latest
+
       - name: Create Release and Upload Assets
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-        uses: softprops/action-gh-release@v2 # Используем этот action
+        uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.tag_version.outputs.new_tag }} # Тег из шага версионирования
-          name: Release ${{ steps.tag_version.outputs.new_tag }} # Имя релиза
-          body: | # Описание релиза
-            Автоматический релиз версии ${{ steps.tag_version.outputs.new_tag }}
+          # Используем тег из outputs задачи version_bump
+          tag_name: ${{ needs.version_bump.outputs.new_tag }}
+          # Используем версию из outputs задачи version_bump
+          name: Release ${{ needs.version_bump.outputs.new_version }}
+          body: |
+            Автоматический релиз версии ${{ needs.version_bump.outputs.new_version }}
           draft: false
           prerelease: false
-          # Указываем маску для файлов, которые нужно загрузить в релиз
-          # Ищет все основные типы установочных файлов в папке out/make и ее подпапках
+          # Указываем путь к файлам внутри папок, созданных download-artifact
           files: |
-            out/make/**/*.deb
-            out/make/**/*.rpm
-            out/make/**/*.zip
-            out/make/**/*.exe
-            out/make/**/*.msi
-            out/make/**/*.AppImage
+            electron-app-ubuntu-latest/*
+            electron-app-windows-latest/*
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Токен обязателен
-
-      # Старые шаги Create GitHub Release и Upload Release Assets УДАЛЕНЫ 
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
