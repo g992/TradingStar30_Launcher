@@ -97,9 +97,11 @@ jobs:
 
       # --- Ручное архивирование и загрузка остаются ---
       - name: Archive Windows standalone build
-        shell: pwsh # Используем PowerShell для архивации
+        shell: pwsh # Продолжаем использовать pwsh, но меняем команду
         run: |
-          Compress-Archive -Path "src-tauri/target/release/*" -DestinationPath "trading-star-launcher-${{ needs.version_bump.outputs.new_version }}-windows-x64-portable.zip" -Exclude "bundle/*", "*.pdb" -Force
+          # Сначала получаем нужные файлы/папки, исключая bundle и .pdb
+          # Затем передаем их в Compress-Archive
+          Get-ChildItem -Path "src-tauri/target/release/" -Exclude "bundle", "*.pdb" | Compress-Archive -DestinationPath "trading-star-launcher-${{ needs.version_bump.outputs.new_version }}-windows-x64-portable.zip" -Force
 
       - name: Upload Windows portable artifact
         uses: actions/upload-artifact@v4
