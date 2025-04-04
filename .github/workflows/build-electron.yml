@@ -3,15 +3,11 @@ name: Build Electron App
 on:
   push:
     branches: [ master ] # Запускать для релизов только при пуше в master
-  # Оставляем PR и workflow_dispatch, но релиз будет создаваться только при пуше в master
   pull_request:
     branches: [ master ]
   workflow_dispatch:
 
 jobs:
-  # ========================================
-  # Задача 1: Увеличение версии и создание тега
-  # ========================================
   version_bump:
     # Запускается только при пуше в master
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
@@ -68,19 +64,8 @@ jobs:
           TAG_NAME=$(git describe --tags --abbrev=0)
           echo "new_tag=${TAG_NAME}" >> $GITHUB_OUTPUT
 
-  # ========================================
-  # Задача 2: Сборка приложения (матрица ОС)
-  # ========================================
   build:
-    # Зависит от задачи version_bump (но выполняется только если version_bump была запущена, т.е. при пуше в master)
-    # Если запуск не из-за пуша в master (PR, dispatch), эта зависимость неактивна, и сборка запустится
-    # Но релиз в конце все равно не будет создан
     needs: version_bump
-    # Важно: Условие `if` на `needs` не работает так просто для пропуска.
-    # Чтобы сборка работала для PR/dispatch, а релиз нет, нужно немного изменить логику.
-    # ПРОСТОЙ ВАРИАНТ: Весь пайплайн (версия, сборка, релиз) работает только для push:master.
-    # Если нужна сборка для PR/dispatch без релиза, нужен отдельный workflow или более сложная логика 'if'.
-    # ОСТАВЛЯЕМ ПРОСТОЙ ВАРИАНТ: этот workflow отвечает за релиз при пуше в master.
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ${{ matrix.os }}
     strategy:
@@ -88,10 +73,9 @@ jobs:
         os: [ubuntu-latest, windows-latest]
         node-version: [20.x]
     permissions:
-      contents: read # Для сборки достаточно прав на чтение
+      contents: read 
     steps:
       - name: Checkout repository
-        # Код будет содержать уже обновленную версию из version_bump
         uses: actions/checkout@v4
 
       - name: Setup Node.js ${{ matrix.node-version }}
@@ -109,7 +93,6 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          # Имя артефакта включает ОС для различия
           name: electron-app-${{ matrix.os }}
           path: |
             out/make/**/*.deb
@@ -120,30 +103,16 @@ jobs:
             out/make/**/*.AppImage
             !out/make/**/RELEASES*
           if-no-files-found: warn
-          # retention-days: 5 # Опционально
 
-  # ========================================
-  # Задача 3: Создание релиза на GitHub
-  # ========================================
   create_release:
-    # Зависит от успешного завершения version_bump и всех сборок в матрице build
     needs: [version_bump, build]
-    # Запускается только при пуше в master
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     permissions:
-      # Права на запись для создания релиза и загрузки ассетов
       contents: write
     steps:
       - name: Download all build artifacts
         uses: actions/download-artifact@v4
-        # Не указываем имя, чтобы скачать все артефакты
-        # Артефакты будут в папках с именами electron-app-ubuntu-latest, electron-app-windows-latest
-
-      # Отладочный шаг: посмотреть содержимое рабочей директории
-      - name: List downloaded files
-        run: ls -R
-
       - name: Create Release and Upload Assets
         uses: softprops/action-gh-release@v2
         with:
@@ -155,8 +124,6 @@ jobs:
             Автоматический релиз версии ${{ needs.version_bump.outputs.new_version }}
           draft: false
           prerelease: false
-          # Указываем путь к файлам внутри папок, созданных download-artifact
-          # Используем единый паттерн для захвата всех файлов в обеих папках
-          files: electron-app-*/*
+          files: electron-app-*/**/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
