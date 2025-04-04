@@ -1,7 +1,7 @@
 {
   "name": "tradingstar30_launcher",
   "productName": "tradingstar30_launcher",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "My Electron application description",
   "author": "G992",
   "main": ".webpack/main",
