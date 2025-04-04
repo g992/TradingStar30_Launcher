@@ -89,15 +89,23 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          # Указываем, как запускать скрипты Tauri (без команды build)
-          # Должно быть просто 'npm run'
           tauriScript: 'npm run'
-          # Указываем имя скрипта ('tauri:build') и флаги ('--release') как аргументы
           args: 'tauri:build --release'
+
+      # --- DEBUG: Проверяем содержимое папки target/release ---
+      - name: List Target Directory Contents
+        shell: pwsh
+        run: |
+          Write-Host "Checking contents of src-tauri/target/release:"
+          Get-ChildItem -Path "src-tauri/target/release/" -ErrorAction SilentlyContinue # Показываем содержимое, если папка есть
+          if (-not (Test-Path "src-tauri/target/release/")) {
+            Write-Host "::warning::Directory src-tauri/target/release/ not found! Listing src-tauri/target/ instead."
+            Get-ChildItem -Path "src-tauri/target/" -ErrorAction SilentlyContinue
+          }
 
       # --- Ручное архивирование и загрузка остаются ---
       - name: Archive Windows standalone build
-        shell: pwsh # Продолжаем использовать pwsh, но меняем команду
+        shell: pwsh
         run: |
           # Сначала получаем нужные файлы/папки, исключая bundle и .pdb
           # Затем передаем их в Compress-Archive
