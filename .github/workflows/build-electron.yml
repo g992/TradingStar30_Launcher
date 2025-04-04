@@ -83,14 +83,9 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
-      # --- Сборка с помощью tauri-action ---
-      - name: Build Tauri app via tauri-action
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tauriScript: 'npm run'
-          args: 'tauri:build --release'
+      # --- Добавляем прямую команду сборки Tauri ---
+      - name: Build Tauri app
+        run: npx tauri build --release
 
       # --- DEBUG: Проверяем содержимое папки target/release ---
       - name: List Target Directory Contents
