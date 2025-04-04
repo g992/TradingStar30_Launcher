@@ -85,7 +85,7 @@ jobs:
 
       # --- Добавляем прямую команду сборки Tauri ---
       - name: Build Tauri app
-        run: npx tauri build --release
+        run: ./node_modules/.bin/tauri build --release
 
       # --- DEBUG: Проверяем содержимое папки target/release ---
       - name: List Target Directory Contents
