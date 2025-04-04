@@ -26,10 +26,11 @@ const currentDir = __dirname;
 
 let mainWindow: BrowserWindow | undefined;
 let appProcess: ChildProcess | null = null;
-let tray: Tray | null = null;
+// let tray: Tray | null = null; // Комментируем, так как трей не будет создаваться
 
 app.isQuitting = false;
 
+/* // Комментируем всю функцию createTray, так как она больше не используется
 async function createTray() {
   const iconPath = path.resolve(currentDir, 'icons/icon.png');
   try {
@@ -67,6 +68,7 @@ async function createTray() {
 
   console.log('[Main] Tray icon created.');
 }
+*/
 
 async function createWindow() {
   mainWindow = new BrowserWindow({
@@ -88,18 +90,24 @@ async function createWindow() {
     mainWindow.webContents.openDevTools();
   }
 
+  /* // Комментируем обработчик minimize
   (mainWindow as any).on('minimize', (event: Electron.Event) => {
     event.preventDefault();
     mainWindow?.hide();
     console.log('[Main] Window minimized to tray.');
   });
+  */
 
   mainWindow.on('close', (event: Electron.Event) => {
+    /* // Комментируем логику скрытия в трей при закрытии
     if (!app.isQuitting) {
       event.preventDefault();
       mainWindow?.hide();
       console.log('[Main] Window closed to tray.');
     }
+    */
+    // Вместо этого просто позволяем окну закрыться, app.quit() будет вызван позже в 'window-all-closed'
+    console.log('[Main] Window close event.');
   });
 
   mainWindow.on('closed', () => {
@@ -109,7 +117,7 @@ async function createWindow() {
 
 void app.whenReady().then(async () => {
   await createWindow();
-  await createTray();
+  // await createTray(); // Комментируем вызов createTray
 });
 
 async function handleFileOpen() {
@@ -262,9 +270,10 @@ app.on('window-all-closed', () => {
     appProcess.kill();
     appProcess = null;
   }
-  if (platform !== 'darwin') {
-    console.log('[Main] All windows closed, but app remains in tray.');
-  }
+  // if (platform !== 'darwin') { // Убираем проверку платформы, чтобы приложение закрывалось всегда
+  console.log('[Main] Quitting app because all windows are closed.');
+  app.quit(); // Добавляем вызов quit()
+  // }
 });
 
 app.on('activate', () => {
@@ -278,7 +287,7 @@ app.on('activate', () => {
 app.on('before-quit', () => {
   console.log('[Main] Before quit event');
   app.isQuitting = true;
-  tray?.destroy();
+  // tray?.destroy(); // Комментируем уничтожение трея
   if (appProcess) {
     console.log('[Main] Killing app process on before-quit.');
     appProcess.kill();
