@@ -71,16 +71,13 @@ jobs:
       # Используем tauri-action для установки Node, Rust, зависимостей WebView2 и т.д.
       - name: Setup Tauri Action
         uses: tauri-apps/tauri-action@v0
-        with:
-          nodeVersion: 20 # Указываем версию Node.js
 
       - name: Install frontend dependencies
         # tauri-action уже установил Node.js
         run: npm ci
 
       - name: Build Tauri app
-        # Используем скрипт из package.json. Флаг --release для оптимизированной сборки.
-        # tauri-action настроит переменные окружения, если нужны секреты для подписи и т.д.
+        # Используем правильное имя скрипта tauri:build
         run: npm run tauri:build -- --release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Часто требуется для tauri-action
